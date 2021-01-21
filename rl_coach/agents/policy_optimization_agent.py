@@ -23,7 +23,7 @@ import numpy as np
 from rl_coach.agents.agent import Agent
 from rl_coach.core_types import Batch, ActionInfo
 from rl_coach.logger import screen
-from rl_coach.spaces import DiscreteActionSpace, BoxActionSpace
+from rl_coach.spaces import DiscreteActionSpace, BoxActionSpace, CompoundActionSpace
 from rl_coach.utils import eps
 
 
@@ -144,6 +144,7 @@ class PolicyOptimizationAgent(Agent):
     def choose_action(self, curr_state):
         # convert to batch so we can run it through the network
         action_values = self.get_prediction(curr_state)
+
         if isinstance(self.spaces.action, DiscreteActionSpace):
             # DISCRETE
             action_probabilities = np.array(action_values).squeeze()
@@ -157,6 +158,24 @@ class PolicyOptimizationAgent(Agent):
             action = self.exploration_policy.get_action(action_values)
 
             action_info = ActionInfo(action=action)
-        else:
-            raise ValueError("The action space of the environment is not compatible with the algorithm")
+        elif isinstance(self.spaces.action, CompoundActionSpace):
+            out_action = []
+            out_action_probs = []
+            for idx, sub_action_spaces in enumerate(self.spaces.action.sub_action_spaces):
+                if isinstance(sub_action_spaces, DiscreteActionSpace):
+                    # DISCRETE
+                    action_probabilities = np.array(action_values[idx]).squeeze()
+
+                    action, _ = self.exploration_policy.get_action(idx, action_probabilities)
+                    out_action.append(action)
+                    out_action_probs.append(action)
+                    
+                    self.entropy.add_sample(-np.sum(action_probabilities * np.log(action_probabilities + eps)))
+                else:
+                    # TODO
+                    raise ValueError("The action space of the environment is not compatible with the algorithm")
+            
+            action_info = ActionInfo(action=np.array(out_action),
+                                     all_action_probabilities=out_action_probs)
+
         return action_info
