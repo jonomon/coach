@@ -67,7 +67,7 @@ class PolicyHead(Head):
             with tf.variable_scope("sub_action_{}".format(action_space_idx)):
                 if isinstance(action_space, DiscreteActionSpace):
                     # create a discrete action network (softmax probabilities output)
-                    self._build_discrete_net(input_layer, action_space)
+                    self._build_discrete_net(input_layer, action_space, action_space_idx)
                 elif isinstance(action_space, BoxActionSpace):
                     # create a continuous action network (bounded mean and stdev outputs)
                     self._build_continuous_net(input_layer, action_space)
@@ -86,9 +86,9 @@ class PolicyHead(Head):
             self.loss = -tf.reduce_mean(self.action_log_probs_wrt_policy * self.advantages)
             tf.losses.add_loss(self.loss_weight[0] * self.loss)
 
-    def _build_discrete_net(self, input_layer, action_space):
+    def _build_discrete_net(self, input_layer, action_space, action_space_idx):
         num_actions = len(action_space.actions)
-        self.actions.append(tf.placeholder(tf.int32, [None], name="actions"))
+        self.actions.append(tf.placeholder(tf.int32, [None], name="actions_{}".format(action_space_idx)))
 
         policy_values = self.dense_layer(num_actions)(input_layer, name='fc')
         self.policy_probs = tf.nn.softmax(policy_values, name="policy")

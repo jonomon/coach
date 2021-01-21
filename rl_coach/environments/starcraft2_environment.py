@@ -134,9 +134,11 @@ class StarCraft2Environment(Environment):
         self.disable_fog = disable_fog
         self.auto_select_all_army = auto_select_all_army
         self.use_full_action_space = use_full_action_space
-
+        
         # step_mul is the equivalent to frame skipping. Not sure if it repeats actions in between or not though.
-        self.env = sc2_env.SC2Env(map_name=self.env_id, step_mul=frame_skip,
+        self.env = sc2_env.SC2Env(map_name=self.env_id, 
+                                  players=[sc2_env.Agent(sc2_env.Race.terran)],
+                                  step_mul=frame_skip,
                                   visualize=self.is_rendered,
                                   agent_interface_format=sc2_env.AgentInterfaceFormat(
                                       feature_dimensions=sc2_env.Dimensions(

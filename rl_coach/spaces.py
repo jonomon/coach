@@ -488,7 +488,7 @@ class CompoundActionSpace(ActionSpace):
         return [action_space.sample() for action_space in self.sub_action_spaces]
 
     def clip_action_to_space(self, actions: List[ActionType]) -> ActionType:
-        if not isinstance(actions, list) or len(actions) != len(self.sub_action_spaces):
+        if not isinstance(actions, np.ndarray) or len(actions) != len(self.sub_action_spaces):
             raise ValueError("The actions to be clipped must be a list with the same number of sub-actions as "
                              "defined in the compound action space.")
         for idx in range(len(self.sub_action_spaces)):
@@ -498,6 +498,26 @@ class CompoundActionSpace(ActionSpace):
     def get_description(self, actions: np.ndarray) -> str:
         description = [action_space.get_description(action) for action_space, action in zip(self.sub_action_spaces, actions)]
         return ' + '.join(description)
+
+    def contains(self, val: Union[np.ndarray]) -> bool:
+        """
+        Checks if value is contained by this space. The shape must match and
+        all of the values must be within the low and high bounds.
+
+        :param val: a value to check
+        :return: True / False depending on if the val matches the space definition
+        """
+        if not len(val) == len(self.sub_action_spaces):
+            return False
+
+        for i in range(len(val)):
+            low = self.sub_action_spaces[i].low
+            high = self.sub_action_spaces[i].high
+            if (low is not None and not np.all(val[i] >= low)) \
+                    or (high is not None and not np.all(val[i] <= high)):
+                # TODO: check the performance overhead this causes
+                return False
+        return True
 
 
 """

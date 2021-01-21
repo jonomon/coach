@@ -29,7 +29,7 @@ from rl_coach.exploration_policies.categorical import CategoricalParameters
 from rl_coach.exploration_policies.continuous_entropy import ContinuousEntropyParameters
 from rl_coach.logger import screen
 from rl_coach.memories.episodic.single_episode_buffer import SingleEpisodeBufferParameters
-from rl_coach.spaces import DiscreteActionSpace, BoxActionSpace
+from rl_coach.spaces import DiscreteActionSpace, BoxActionSpace, CompoundActionSpace
 from rl_coach.utils import last_sample
 
 
@@ -168,8 +168,13 @@ class ActorCriticAgent(PolicyOptimizationAgent):
             actions = np.expand_dims(actions, -1)
 
         # train
-        result = self.networks['main'].online_network.accumulate_gradients({**batch.states(network_keys),
-                                                                            'output_1_0': actions},
+        if isinstance(self.spaces.action, CompoundActionSpace):
+            feed_dict = {**batch.states(network_keys)}
+            for i in range(actions.shape[1]):
+                feed_dict["output_1_{}".format(i)] = actions[:, i]
+        else:
+            feed_dict = {**batch.states(network_keys), 'output_1_0': actions}
+        result = self.networks['main'].online_network.accumulate_gradients(feed_dict,
                                                                        [state_value_head_targets, action_advantages])
 
         # logging

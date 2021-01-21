@@ -34,7 +34,7 @@ from rl_coach.exploration_policies.categorical import CategoricalParameters
 from rl_coach.logger import screen
 from rl_coach.memories.episodic.episodic_experience_replay import EpisodicExperienceReplayParameters
 from rl_coach.schedules import ConstantSchedule
-from rl_coach.spaces import DiscreteActionSpace, BoxActionSpace
+from rl_coach.spaces import DiscreteActionSpace, BoxActionSpace, CompoundActionSpace
 
 
 class ClippedPPONetworkParameters(NetworkParameters):
@@ -237,15 +237,21 @@ class ClippedPPOAgent(ActorCriticAgent):
                     value_targets = total_returns[start:end]
 
                 inputs = copy.copy({k: v[start:end] for k, v in batch.states(network_keys).items()})
-                inputs['output_1_0'] = actions
+                if isinstance(self.spaces.action, CompoundActionSpace):
+                    for i in range(actions.shape[1]):
+                        inputs["output_1_{}".format(i)] = actions[:, i]
+                    input_idx = actions.shape[1]
+                else:
+                    inputs['output_1_0'] = actions
+                    input_idx = 1
 
                 # The old_policy_distribution needs to be represented as a list, because in the event of
                 # discrete controls, it has just a mean. otherwise, it has both a mean and standard deviation
                 for input_index, input in enumerate(old_policy_distribution):
-                    inputs['output_1_{}'.format(input_index + 1)] = input
+                    inputs['output_1_{}'.format(input_index + input_idx)] = input
 
                 # update the clipping decay schedule value
-                inputs['output_1_{}'.format(len(old_policy_distribution)+1)] = \
+                inputs['output_1_{}'.format(len(old_policy_distribution)+input_idx)] = \
                     self.ap.algorithm.clipping_decay_schedule.current_value
 
                 total_loss, losses, unclipped_grads, fetch_result = \
