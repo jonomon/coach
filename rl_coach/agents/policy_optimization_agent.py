@@ -168,7 +168,7 @@ class PolicyOptimizationAgent(Agent):
 
                     action, _ = self.exploration_policy.get_action(idx, action_probabilities)
                     out_action.append(action)
-                    out_action_probs.append(action)
+                    out_action_probs.append(action_probabilities)
                     
                     self.entropy.add_sample(-np.sum(action_probabilities * np.log(action_probabilities + eps)))
                 else:
